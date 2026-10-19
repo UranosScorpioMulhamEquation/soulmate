@@ -124,7 +124,7 @@ def calculate_aspect(deg1, deg2, planet1_id, planet2_id):
 # ---------------------------------------------------------
 # 3. واجهة المستخدم الرئيسية (Streamlit UI)
 # ---------------------------------------------------------
-st.title("✨ النظام المطور للخرائط الفلكية التوافقية (مع كويكبات الحب والعبور الديناميكي)")
+st.title("✨ النظام المطور للخرائط الفلكية التوافقية (مع كويكبات الحب والعبور الديناميكي 30 يوماً)")
 st.markdown("تطوير الفلكي المبرمج الدكتور : استرو رادار")
 st.markdown("---")
 
@@ -156,8 +156,8 @@ target_year = st.sidebar.number_input(
     "سنة التحليل والتقرير الشهري الديناميكي", min_value=2026, max_value=2050, value=2026
 )
 
-if st.button("🚀 تشغيل التحليل التوافقي الشامل والعبور الفلكي", type="primary"):
-    with st.spinner("جاري حساب الاتصالات الفلكية المتقدمة وحساب العبور الشهري الحقيقي..."):
+if st.button("🚀 تشغيل التحليل التوافقي الشامل والعبور الفلكي (مسح 30 يوم)", type="primary"):
+    with st.spinner("جاري حساب الاتصالات الفلكية المتقدمة ومسح العبور الشهري لـ 30 يوماً لكل شهر..."):
 
         # حساب المواقع الفلكية للميلاد للشريكين
         pos1 = get_planet_positions(dob1.year, dob1.month, dob1.day)
@@ -226,59 +226,81 @@ if st.button("🚀 تشغيل التحليل التوافقي الشامل وا�
         if not aspect_records:
             st.warning("لم يتم رصد اتصالات قوية ضمن الأجرام المحددة.")
         else:
-            st.dataframe(df_aspects, width='stretch')
+            st.dataframe(df_aspects, use_container_width=True)
 
         # ---------------------------------------------------------
-        # التحليل الشهري الديناميكي الفعلي لتعبر الكواكب (Transits)
+        # التحليل الشهري الديناميكي الفعلي لتعبر الكواكب (مسح 30 يوم)
         # ---------------------------------------------------------
         st.markdown("---")
-        st.markdown(f"### 📅 التحليل الشهري الديناميكي للعبور الفلكي لسنة: {target_year}")
-        st.caption("يعتمد الجدول أدناه على حساب مواقع كواكب العبور الحقيقية (زحل، المشتري، المريخ، الزهرة، القمر والكويكبات) في منتصف كل شهر ومقارنتها بخريطتي الشريكين.")
+        st.markdown(f"### 📅 التحليل الشهري الديناميكي للعبور الفلكي (مسح 30 يوم لكل شهر) لسنة: {target_year}")
+        st.caption("يعتمد الجدول أدناه على مسح 30 يوماً فعلياً لكل شهر ومقارنة اتصالات الكواكب العابرة بخريطة الشريكين يوماً بيوم.")
 
         monthly_data = []
 
         for m_num, m_name in ARABIC_MONTHS.items():
-            # حساب مواقع الكواكب العابرة في منتصف الشهر (يوم 15 الساعة 12:00 UTC)
-            transit_pos = get_planet_positions(target_year, m_num, 15)
-            
-            month_emo_score = 0
-            month_mat_score = 0
-            
-            # تقييم تأثير العبور على الشريك الأول والثاني
-            for t_planet, t_deg in transit_pos.items():
-                if t_planet not in PLANETS:
-                    continue
-                p_info = PLANETS[t_planet]
+            month_emo_compatible_days = 0
+            month_mat_compatible_days = 0
+            total_scanned_days = 0
+
+            # مسح 30 يوم فعلياً في الشهر
+            for day in range(1, 31):
+                try:
+                    current_date = datetime.date(target_year, m_num, day)
+                except ValueError:
+                    continue  # لضمان عدم تجاوز أواخر الشهور القصيرة مثل شباط (فبراير)
+
+                total_scanned_days += 1
+                transit_pos = get_planet_positions(target_year, m_num, day)
                 
-                # فحص الاتصال مع خريطة الشريك الأول
-                for p1_id, p1_deg in pos1.items():
-                    _, sc, _ = calculate_aspect(t_deg, p1_deg, t_planet, p1_id)
-                    if "عاطفي" in p_info["type"] or "ارتباط" in p_info["type"] or "رغبة" in p_info["type"]:
-                        month_emo_score += sc
-                    else:
-                        month_mat_score += sc
+                day_emo_score = 0
+                day_mat_score = 0
+                
+                # فحص تأثير العبور على الشريك الأول
+                for t_planet, t_deg in transit_pos.items():
+                    if t_planet not in PLANETS:
+                        continue
+                    p_info = PLANETS[t_planet]
+                    
+                    for p1_id, p1_deg in pos1.items():
+                        _, sc, _ = calculate_aspect(t_deg, p1_deg, t_planet, p1_id)
+                        if "عاطفي" in p_info["type"] or "ارتباط" in p_info["type"] or "رغبة" in p_info["type"]:
+                            day_emo_score += sc
+                        else:
+                            day_mat_score += sc
 
-                # فحص الاتصال مع خريطة الشريك الثاني
-                for p2_id, p2_deg in pos2.items():
-                    _, sc, _ = calculate_aspect(t_deg, p2_deg, t_planet, p2_id)
-                    if "عاطفي" in p_info["type"] or "ارتباط" in p_info["type"] or "رغبة" in p_info["type"]:
-                        month_emo_score += sc
-                    else:
-                        month_mat_score += sc
+                    for p2_id, p2_deg in pos2.items():
+                        _, sc, _ = calculate_aspect(t_deg, p2_deg, t_planet, p2_id)
+                        if "عاطفي" in p_info["type"] or "ارتباط" in p_info["type"] or "رغبة" in p_info["type"]:
+                            day_emo_score += sc
+                        else:
+                            day_mat_score += sc
 
-            # تحويل النقاط الناتجة عن العبور الفعلي إلى نسب مئوية معتدلة (بين 20% و 95%)
-            emo_pct = int(np.clip(50 + (month_emo_score * 2.5), 20, 95))
-            mat_pct = int(np.clip(50 + (month_mat_score * 2.5), 20, 95))
+                # تحديد ما إذا كان اليوم يحمل توافقاً إيجابياً
+                if day_emo_score > 0:
+                    month_emo_compatible_days += 1
+                if day_mat_score > 0:
+                    month_mat_compatible_days += 1
+
+            # تطبيق قاعدة الخصم والإضافة (3.3 نقطة لكل يوم، الأساس 99%)
+            if total_scanned_days > 0:
+                unfavorable_emo = total_scanned_days - month_emo_compatible_days
+                unfavorable_mat = total_scanned_days - month_mat_compatible_days
+
+                emo_pct = max(20, int(99 - (unfavorable_emo * 3.3)))
+                mat_pct = max(20, int(99 - (unfavorable_mat * 3.3)))
+            else:
+                emo_pct = 50
+                mat_pct = 50
 
             support_type = []
-            support_type.append("💖 دعم عاطفي عالي وحميمية" if emo_pct >= 55 else "⚠️ فتور عاطفي أو تحدي مؤقت")
-            support_type.append("💰 دعم مادي / فرصة مواتية" if mat_pct >= 55 else "⚖️ ضغط مادي أو حاجة لإدارة الحكمة")
+            support_type.append("💖 دعم عاطفي عالي وحميمية" if emo_pct >= 60 else "⚠️ فتور عاطفي أو تحدي مؤقت")
+            support_type.append("💰 دعم مادي / فرصة مواتية" if mat_pct >= 60 else "⚖️ ضغط مادي أو حاجة لإدارة الحكمة")
 
             monthly_data.append({
                 "الشهر": m_name,
                 "نسبة الدعم العاطفي (%)": f"{emo_pct}%",
                 "نسبة الدعم المادي (%)": f"{mat_pct}%",
-                "طبيعة الشهر الفلكية (العبور الحقيقي)": " | ".join(support_type),
+                "طبيعة الشهر الفلكية (مسح 30 يوم)": " | ".join(support_type),
             })
 
         df_monthly = pd.DataFrame(monthly_data)
@@ -310,7 +332,7 @@ if st.button("🚀 تشغيل التحليل التوافقي الشامل وا�
                 <td>{row["الشهر"]}</td>
                 <td>{row["نسبة الدعم العاطفي (%)"]}</td>
                 <td>{row["نسبة الدعم المادي (%)"]}</td>
-                <td>{row["طبيعة الشهر الفلكية (العبور الحقيقي)"]}</td>
+                <td>{row["طبيعة الشهر الفلكية (مسح 30 يوم)"]}</td>
             </tr>
             """
 
@@ -325,12 +347,12 @@ if st.button("🚀 تشغيل التحليل التوافقي الشامل وا�
                 h1, h2, h3 {{ color: #2c3e50; text-align: center; }}
                 .header-box {{ background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px; }}
                 .badge {{ padding: 6px 12px; border-radius: 4px; color: #000; font-weight: bold; display: inline-block; margin: 5px 0; }}
-                .green {{ background: #27ae60; }}
-                .orange {{ background: #d35400; }}
-                .red {{ background: #c0392b; }}
+                .green {{ background: #27ae60; color: white !important; }}
+                .orange {{ background: #d35400; color: white !important; }}
+                .red {{ background: #c0392b; color: white !important; }}
                 table {{ width: 100%; border-collapse: collapse; margin-top: 20px; margin-bottom: 30px; font-size: 14px; }}
                 th, td {{ border: 1px solid #bdc3c7; padding: 10px; text-align: center; }}
-                th {{ background: #2c3e50; color: #000; }}
+                th {{ background: #2c3e50; color: white; }}
                 tr:nth-child(even) {{ background: #f9f9f9; }}
                 .footer {{ text-align: center; margin-top: 50px; font-size: 12px; color: #7f8c8d; border-top: 1px solid #eee; padding-top: 10px; }}
                 @media print {{
@@ -340,7 +362,7 @@ if st.button("🚀 تشغيل التحليل التوافقي الشامل وا�
             </style>
         </head>
         <body>
-            <h1>✨ التقرير الفلكي التوافقي المتقدم والعبور الشهري</h1>
+            <h1>✨ التقرير الفلكي التوافقي المتقدم والعبور الشهري (مسح 30 يوم)</h1>
             <div class="header-box">
                 <p><b>الشريك الأول:</b> {name1} (تاريخ الميلاد: {dob1})</p>
                 <p><b>الشريك الثاني:</b> {name2} (تاريخ الميلاد: {dob2})</p>
@@ -367,7 +389,7 @@ if st.button("🚀 تشغيل التحليل التوافقي الشامل وا�
                 </tbody>
             </table>
 
-            <h2>📅 جدول العبور والتحليل الشهري الديناميكي لسنة {target_year}</h2>
+            <h2>📅 جدول العبور والتحليل الشهري الديناميكي (مسح 30 يوم) لسنة {target_year}</h2>
             <table>
                 <thead>
                     <tr>
@@ -403,4 +425,4 @@ if st.button("🚀 تشغيل التحليل التوافقي الشامل وا�
         )
         st.markdown(href, unsafe_allow_html=True)
 
-        st.success("تم إتمام حساب التقرير الفلكي التوافقي وحساب العبور الحقيقي وتجهيز ملف الطباعة بنجاح.")
+        st.success("تم إتمام حساب التقرير الفلكي التوافقي ومسح العبور الحقيقي لـ 30 يوماً وتجهيز ملف الطباعة بنجاح.")
